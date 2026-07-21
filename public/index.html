@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tra Cứu Bảo Hành & Sửa Chữa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4">
+  <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl p-8">
+    <h1 class="text-2xl font-bold text-slate-800 text-center mb-2">Tra Cứu Sửa Chữa & Bảo Hành</h1>
+    <p class="text-slate-500 text-center mb-6">Nhập số điện thoại hoặc mã IMEI thiết bị của bạn</p>
+    
+    <div class="flex gap-2 mb-6">
+      <input type="text" id="searchInput" placeholder="Nhập SĐT hoặc IMEI..." class="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button onclick="searchOrder()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition">Tra cứu</button>
+    </div>
+
+    <div id="resultContainer" class="space-y-4"></div>
+  </div>
+
+  <script>
+    async function searchOrder() {
+      const query = document.getElementById('searchInput').value.trim();
+      const container = document.getElementById('resultContainer');
+      if (!query) return alert('Vui lòng nhập thông tin tìm kiếm!');
+
+      container.innerHTML = '<p class="text-center text-slate-400">Đang tìm kiếm...</p>';
+
+      try {
+        const res = await fetch(`/api/search?query=${query}`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+          container.innerHTML = '<div class="p-4 bg-amber-50 text-amber-700 rounded-xl text-center">Không tìm thấy thiết bị nào khớp với thông tin này.</div>';
+          return;
+        }
+
+        container.innerHTML = data.map(item => `
+          <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full">${item.orderCode}</span>
+              <span class="text-sm font-bold text-emerald-600">${item.status}</span>
+            </div>
+            <div class="text-lg font-bold text-slate-800">${item.deviceName}</div>
+            <div class="text-sm text-slate-600 grid grid-cols-2 gap-2 mt-2">
+              <div><strong>IMEI/Serial:</strong> ${item.imei || 'Không có'}</div>
+              <div><strong>Bảo hành:</strong> ${formatWarranty(item.warrantyPeriod)}</div>
+              <div><strong>Ngày nhận:</strong> ${new Date(item.receivedDate).toLocaleDateString('vi-VN')}</div>
+              <div><strong>Tình trạng:</strong> ${item.conditionNotes || 'Bình thường'}</div>
+            </div>
+            ${item.issueDescription ? `<div class="text-sm text-slate-500 mt-2 bg-white p-3 rounded-lg border border-slate-100"><strong>Lỗi báo:</strong> ${item.issueDescription}</div>` : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-xl text-center">Lỗi kết nối server!</div>';
+      }
+    }
+
+    function formatWarranty(period) {
+      if (period === '0' || !period) return 'Không bảo hành';
+      return `${period} tháng`;
+    }
+  </script>
+</body>
+</html>
