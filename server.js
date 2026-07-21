@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Chuỗi kết nối MongoDB Atlas của bạn
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://tinhocbaoboi2_db_user:08IUDo3mDvsN9NUY@baohanh.ukjv7kj.mongodb.net/?appName=baohanh';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://tinhocbaoboi2_db_user:Minhphuong97@baohanh.ukjv7kj.mongodb.net/?appName=baohanh';
 
 // Kết nối MongoDB
 mongoose.connect(MONGO_URI)
