@@ -2,64 +2,157 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tra Cứu Bảo Hành & Sửa Chữa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tra Cứu Bảo Hành Dịch Vụ Tin Học Bảo Bôi</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="max-w-xl w-full bg-white rounded-2xl shadow-xl p-8">
-    <h1 class="text-2xl font-bold text-slate-800 text-center mb-2">Tra Cứu Sửa Chữa & Bảo Hành</h1>
-    <p class="text-slate-500 text-center mb-6">Nhập số điện thoại hoặc mã IMEI thiết bị của bạn</p>
+<body class="bg-slate-100 min-h-screen pb-10">
+  
+  <!-- Header Mobile -->
+  <div class="bg-blue-600 text-white p-5 rounded-b-3xl shadow-lg text-center space-y-1">
+    <h1 class="text-xl font-extrabold tracking-wide">TIN HỌC & ĐIỆN THOẠI BẢO BỐI</h1>
+    <p class="text-xs text-blue-100">Tra cứu tiến độ sửa chữa & thời hạn bảo hành</p>
+  </div>
+
+  <div class="max-w-md mx-auto px-4 -mt-4 space-y-4">
     
-    <div class="flex gap-2 mb-6">
-      <input type="text" id="searchInput" placeholder="Nhập SĐT hoặc IMEI..." class="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <button onclick="searchOrder()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition">Tra cứu</button>
+    <!-- Thanh Tìm Kiếm & Quét Mã -->
+    <div class="bg-white p-4 rounded-2xl shadow-md space-y-3">
+      <div class="relative">
+        <input type="text" id="searchInput" placeholder="Nhập SĐT, IMEI hoặc Mã đơn..." class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+        <button onclick="searchOrder()" class="absolute right-2 top-2 bg-blue-600 text-white p-1.5 rounded-lg text-xs font-bold">Tìm</button>
+      </div>
+
+      <button onclick="toggleQRScanner()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition">
+        <span>📷</span> Quét Mã QR Trên Tem Bảo Hành
+      </button>
     </div>
 
+    <!-- Scanner Modal Mobile -->
+    <div id="scannerModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">
+      <div class="bg-white p-4 rounded-2xl w-full max-w-xs text-center space-y-3">
+        <h3 class="text-sm font-bold text-slate-800">Đưa camera vào tem QR</h3>
+        <div id="reader" class="rounded-xl overflow-hidden"></div>
+        <button onclick="toggleQRScanner()" class="w-full bg-red-500 text-white py-2 rounded-xl text-xs font-bold">Đóng</button>
+      </div>
+    </div>
+
+    <!-- Container Kết Quả -->
     <div id="resultContainer" class="space-y-4"></div>
+
   </div>
 
   <script>
-    async function searchOrder() {
-      const query = document.getElementById('searchInput').value.trim();
-      const container = document.getElementById('resultContainer');
-      if (!query) return alert('Vui lòng nhập thông tin tìm kiếm!');
+    let html5QrcodeScanner = null;
 
-      container.innerHTML = '<p class="text-center text-slate-400">Đang tìm kiếm...</p>';
+    // Tự động kiểm tra nếu truy cập từ đường dẫn QR (VD: index.html?code=HD123456)
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      if (code) {
+        document.getElementById('searchInput').value = code;
+        searchOrder();
+      }
+    });
 
-      try {
-        const res = await fetch(`/api/search?query=${query}`);
-        const data = await res.json();
-
-        if (data.length === 0) {
-          container.innerHTML = '<div class="p-4 bg-amber-50 text-amber-700 rounded-xl text-center">Không tìm thấy thiết bị nào khớp với thông tin này.</div>';
-          return;
-        }
-
-        container.innerHTML = data.map(item => `
-          <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-2">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-semibold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full">${item.orderCode}</span>
-              <span class="text-sm font-bold text-emerald-600">${item.status}</span>
-            </div>
-            <div class="text-lg font-bold text-slate-800">${item.deviceName}</div>
-            <div class="text-sm text-slate-600 grid grid-cols-2 gap-2 mt-2">
-              <div><strong>IMEI/Serial:</strong> ${item.imei || 'Không có'}</div>
-              <div><strong>Bảo hành:</strong> ${formatWarranty(item.warrantyPeriod)}</div>
-              <div><strong>Ngày nhận:</strong> ${new Date(item.receivedDate).toLocaleDateString('vi-VN')}</div>
-              <div><strong>Tình trạng:</strong> ${item.conditionNotes || 'Bình thường'}</div>
-            </div>
-            ${item.issueDescription ? `<div class="text-sm text-slate-500 mt-2 bg-white p-3 rounded-lg border border-slate-100"><strong>Lỗi báo:</strong> ${item.issueDescription}</div>` : ''}
-          </div>
-        `).join('');
-      } catch (err) {
-        container.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-xl text-center">Lỗi kết nối server!</div>';
+    function toggleQRScanner() {
+      const modal = document.getElementById('scannerModal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+        html5QrcodeScanner.render((decodedText) => {
+          document.getElementById('searchInput').value = decodedText;
+          toggleQRScanner();
+          html5QrcodeScanner.clear();
+          searchOrder();
+        });
+      } else if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
       }
     }
 
-    function formatWarranty(period) {
-      if (period === '0' || !period) return 'Không bảo hành';
-      return `${period} tháng`;
+    async function searchOrder() {
+      const query = document.getElementById('searchInput').value.trim();
+      const container = document.getElementById('resultContainer');
+      if (!query) return;
+
+      container.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">⏳ Đang tìm kiếm...</div>';
+
+      try {
+        const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="p-4 bg-white rounded-2xl text-center text-xs text-slate-500 shadow-sm">Không tìm thấy thông tin phù hợp!</div>';
+          return;
+        }
+
+        container.innerHTML = data.map(item => {
+          const warrantyInfo = calculateWarranty(item.completedDate || item.receivedDate, item.warrantyPeriod);
+          
+          return `
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+              <div class="flex justify-between items-center border-b pb-2">
+                <span class="text-[10px] font-extrabold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md">${item.orderCode}</span>
+                <span class="text-xs font-bold text-blue-600">${item.status}</span>
+              </div>
+
+              <!-- Thẻ Trạng Thái Bảo Hành -->
+              <div class="p-3 rounded-xl ${warrantyInfo.isExpired ? 'bg-red-50 border border-red-100' : 'bg-emerald-50 border border-emerald-100'}">
+                <div class="text-xs font-bold ${warrantyInfo.isExpired ? 'text-red-600' : 'text-emerald-700'}">
+                  ${warrantyInfo.statusText}
+                </div>
+                <div class="text-[11px] mt-1 font-semibold ${warrantyInfo.isExpired ? 'text-red-500' : 'text-emerald-600'}">
+                  ${warrantyInfo.countdownText}
+                </div>
+              </div>
+
+              <!-- Chi tiết máy -->
+              <div class="text-xs space-y-1.5 text-slate-600">
+                <div class="font-bold text-sm text-slate-800">${item.deviceName}</div>
+                <div><strong>IMEI/Serial:</strong> ${item.imei || 'N/A'}</div>
+                <div><strong>Ngày nhận/lắp:</strong> ${formatDate(item.receivedDate)}</div>
+                ${item.issueDescription ? `<div class="bg-slate-50 p-2 rounded-lg border text-[11px]"><strong>Nội dung:</strong> ${item.issueDescription}</div>` : ''}
+              </div>
+
+              <!-- Hình ảnh -->
+              ${(item.inImages?.length || item.outImages?.length) ? `
+                <div class="pt-2 border-t">
+                  <div class="text-[11px] font-bold text-slate-500 mb-1">Ảnh thực tế:</div>
+                  <div class="flex gap-2 overflow-x-auto pb-1">
+                    ${(item.inImages || []).map(img => `<a href="${img}" target="_blank"><img src="${img}" class="w-14 h-14 object-cover rounded-lg border"></a>`).join('')}
+                    ${(item.outImages || []).map(img => `<a href="${img}" target="_blank"><img src="${img}" class="w-14 h-14 object-cover rounded-lg border border-emerald-400"></a>`).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = '<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-center text-xs">Lỗi kết nối!</div>';
+      }
+    }
+
+    function calculateWarranty(startDateStr, months) {
+      if (!months || months == 0) return { isExpired: true, statusText: 'Không Bảo Hành', countdownText: 'N/A' };
+      const start = new Date(startDateStr);
+      const expire = new Date(start);
+      expire.setMonth(expire.getMonth() + parseInt(months));
+      const diffDays = Math.ceil((expire - new Date()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return { isExpired: true, statusText: '❌ Hết Hạn Bảo Hành', countdownText: `Đã quá hạn ${Math.abs(diffDays)} ngày` };
+      }
+      return { isExpired: false, statusText: '🛡️ Còn Bảo Hành', countdownText: `Còn lại ${diffDays} ngày bảo hành` };
+    }
+
+    function formatDate(d) {
+      if (!d) return 'N/A';
+      return new Date(d).toLocaleDateString('vi-VN');
     }
   </script>
 </body>
