@@ -6,7 +6,7 @@
   <title>TIN HỌC BẢO BỐI - Quản Lý Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Widget Upload Cloudinary -->
+  <!-- Cloudinary Upload Widget -->
   <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
   <style>
     body { -webkit-tap-highlight-color: transparent; }
@@ -19,7 +19,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen pb-20">
 
-  <!-- Header Sticky Admin -->
+  <!-- Header Admin -->
   <div class="sticky top-0 z-40 bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
     <div>
       <h1 class="text-sm font-extrabold text-blue-400">TIN HỌC BẢO BỐI</h1>
@@ -30,7 +30,7 @@
 
   <div class="max-w-md mx-auto p-4 space-y-4">
 
-    <!-- Form Tiếp Nhận Mobile -->
+    <!-- Form Tạo Đơn Mới -->
     <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
       <h2 class="text-sm font-bold text-slate-800 border-b pb-2 flex justify-between items-center">
         <span>➕ Tạo Đơn / Lắp Đặt Mới</span>
@@ -67,7 +67,7 @@
           <input type="text" id="imei" onblur="checkHistory()" placeholder="Nhập IMEI hoặc Serial máy..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
         </div>
 
-        <!-- Cảnh Báo Lịch Sử Sửa Chữa Cũ -->
+        <!-- Cảnh báo lịch sử cũ -->
         <div id="historyAlert" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-[11px] text-amber-800">
           <div class="font-bold flex items-center gap-1">⚠️ Lịch sử thiết bị / SĐT cũ:</div>
           <div id="historyContent"></div>
@@ -101,33 +101,102 @@
           <textarea id="issueDescription" rows="2" placeholder="Tình trạng máy lúc nhận..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl"></textarea>
         </div>
 
-        <!-- Upload Ảnh Trực Tiếp Bằng Cloudinary -->
         <div>
           <label class="font-semibold text-slate-600 block mb-1">Hình ảnh thiết bị lúc nhận</label>
-          <button type="button" onclick="openCloudinaryWidget()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2">
+          <button type="button" onclick="openCloudinaryWidget('create')" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2">
             📸 Chụp / Chọn Ảnh Tải Lên
           </button>
           <div id="uploadPreview" class="flex gap-2 overflow-x-auto mt-2"></div>
           <input type="hidden" id="inImages">
         </div>
 
-        <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition">Tạo Phiếu Nhận Máy</button>
+        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition">Tạo Phiếu Nhận Máy</button>
       </form>
     </div>
 
-    <!-- Danh Sách Quản Lý Mobile -->
+    <!-- Danh Sách Quản Lý Đơn -->
     <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
-      <h2 class="text-sm font-bold text-slate-800">📋 Danh Sách Đơn Gần Đây</h2>
+      <h2 class="text-sm font-bold text-slate-800">📋 Danh Sách Phiếu</h2>
       <div id="orderList" class="space-y-3"></div>
     </div>
 
+  </div>
+
+  <!-- Modal Chỉnh Sửa Thông Tin Phiếu -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-4 rounded-2xl max-w-sm w-full space-y-3 max-h-[90vh] overflow-y-auto text-xs">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-slate-800 text-sm">✏️ Cập Nhật Phiếu <span id="editOrderCode" class="text-blue-600"></span></h3>
+        <button onclick="closeEditModal()" class="text-slate-400 font-bold text-base">✕</button>
+      </div>
+
+      <form id="editForm" onsubmit="saveEditOrder(event)" class="space-y-2.5">
+        <input type="hidden" id="editOrderId">
+
+        <div>
+          <label class="font-semibold text-slate-600">Trạng Thái Phiếu</label>
+          <select id="editStatus" class="w-full mt-1 p-2 bg-slate-50 border rounded-lg font-bold text-blue-600">
+            <option value="Đang tiếp nhận">Đang tiếp nhận</option>
+            <option value="Đang xử lý">Đang xử lý</option>
+            <option value="Đã hoàn tất">Đã hoàn tất</option>
+            <option value="Đã trả khách">Đã trả khách</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-semibold text-slate-600">Tên Khách</label>
+            <input type="text" id="editCustomerName" required class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">SĐT</label>
+            <input type="tel" id="editPhone" required class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
+          </div>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-600">Tên Thiết Bị / Dịch Vụ</label>
+          <input type="text" id="editDeviceName" required class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-semibold text-slate-600">IMEI / Serial</label>
+            <input type="text" id="editImei" class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">Bảo Hành (Tháng)</label>
+            <input type="number" id="editWarrantyPeriod" class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
+          </div>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-600">Mô Tả Lỗi / Yêu Cầu</label>
+          <textarea id="editIssueDescription" rows="2" class="w-full mt-1 p-2 bg-slate-50 border rounded-lg"></textarea>
+        </div>
+
+        <!-- Thêm/Sửa Ảnh Bằng Cloudinary -->
+        <div>
+          <label class="font-semibold text-slate-600 block mb-1">Hình ảnh thiết bị</label>
+          <button type="button" onclick="openCloudinaryWidget('edit')" class="w-full bg-slate-700 text-white py-2 rounded-lg font-bold">
+            📷 Thêm Ảnh Mới
+          </button>
+          <div id="editUploadPreview" class="flex gap-2 overflow-x-auto mt-2"></div>
+          <input type="hidden" id="editInImages">
+        </div>
+
+        <div class="flex gap-2 pt-2 border-t">
+          <button type="submit" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-bold">Lưu Thay Đổi</button>
+          <button type="button" onclick="closeEditModal()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold">Hủy</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Modal In Phiếu & Mã QR Tem -->
   <div id="printModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white p-5 rounded-2xl max-w-xs w-full text-center space-y-4">
       
-      <!-- Khung Phiếu In -->
       <div id="printableTicket" class="p-4 bg-white text-left space-y-2 text-xs border rounded-xl text-slate-800">
         <div class="text-center border-b pb-2">
           <div class="font-black text-base text-blue-600">TIN HỌC BẢO BỐI</div>
@@ -154,9 +223,11 @@
   </div>
 
   <script>
+    let currentOrders = [];
     let uploadedImageUrls = [];
+    let editUploadedImageUrls = [];
 
-    // Cấu hình mặc định ô Ngày giờ giờ phút giây hiện tại
+    // Tự động set thời gian hiện tại
     function setNowDateTime() {
       const now = new Date();
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -164,88 +235,165 @@
     }
     setNowDateTime();
 
-    // Widget Upload Cloudinary (Demo Cloud Name)
-    function openCloudinaryWidget() {
+    // Widget Cloudinary Tải Ảnh
+    function openCloudinaryWidget(target = 'create') {
       cloudinary.openUploadWidget({
-        cloudName: 'uy1vtuzp', 
-        uploadPreset: 'baohanh',
+        cloudName: 'uy1vtuzp', // Cloud Name của bạn
+        uploadPreset: 'baoboi_preset', // Tên Unsigned Preset bạn tạo trên Cloudinary
         sources: ['local', 'camera'],
         multiple: true,
         maxFiles: 5
       }, (error, result) => {
         if (!error && result && result.event === "success") {
-          uploadedImageUrls.push(result.info.secure_url);
-          document.getElementById('inImages').value = uploadedImageUrls.join(',');
-          
-          // Preview ảnh vừa upload
-          const preview = document.getElementById('uploadPreview');
-          preview.innerHTML = uploadedImageUrls.map(url => `
-            <img src="${url}" class="w-12 h-12 object-cover rounded-lg border">
-          `).join('');
+          const url = result.info.secure_url;
+          if (target === 'create') {
+            uploadedImageUrls.push(url);
+            document.getElementById('inImages').value = uploadedImageUrls.join(',');
+            renderPreview('uploadPreview', uploadedImageUrls);
+          } else {
+            editUploadedImageUrls.push(url);
+            document.getElementById('editInImages').value = editUploadedImageUrls.join(',');
+            renderPreview('editUploadPreview', editUploadedImageUrls);
+          }
         }
       });
     }
 
-    async function checkHistory() {
-      const imei = document.getElementById('imei').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      if (!imei && !phone) return;
-
-      const res = await fetch(`/api/admin/history?imei=${encodeURIComponent(imei)}&phone=${encodeURIComponent(phone)}`);
-      const data = await res.json();
-
-      const alertBox = document.getElementById('historyAlert');
-      const content = document.getElementById('historyContent');
-
-      if (data && data.length > 0) {
-        alertBox.classList.remove('hidden');
-        content.innerHTML = data.map(h => `
-          <div>• <strong>${h.orderCode}</strong> (${formatDateTime(h.receivedDate)}): ${h.deviceName} - <em>${h.status}</em></div>
-        `).join('');
-      } else {
-        alertBox.classList.add('hidden');
-      }
+    function renderPreview(elementId, urls) {
+      document.getElementById(elementId).innerHTML = urls.map(url => `
+        <a href="${url}" target="_blank">
+          <img src="${url}" class="w-12 h-12 object-cover rounded-lg border">
+        </a>
+      `).join('');
     }
 
+    // Tải danh sách đơn hàng
     async function loadOrders() {
       const list = document.getElementById('orderList');
       try {
         const res = await fetch('/api/admin/orders');
-        const orders = await res.json();
+        currentOrders = await res.json();
 
-        if (!orders.length) {
+        if (!currentOrders.length) {
           list.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Chưa có đơn nào</div>';
           return;
         }
 
-        list.innerHTML = orders.map(o => `
-          <div class="border rounded-xl p-3 bg-slate-50 space-y-2 text-xs">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-blue-600">${o.orderCode}</span>
-              <select onchange="updateStatus('${o._id}', this.value)" class="text-[11px] border rounded p-1 bg-white font-medium">
-                <option value="Đang tiếp nhận" ${o.status === 'Đang tiếp nhận' ? 'selected' : ''}>Đang tiếp nhận</option>
-                <option value="Đang xử lý" ${o.status === 'Đang xử lý' ? 'selected' : ''}>Đang xử lý</option>
-                <option value="Đã hoàn tất" ${o.status === 'Đã hoàn tất' ? 'selected' : ''}>Đã hoàn tất</option>
-                <option value="Đã trả khách" ${o.status === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
-              </select>
-            </div>
+        list.innerHTML = currentOrders.map((o, index) => {
+          // Định dạng màu badge cho từng Trạng thái
+          let statusBadgeClass = 'bg-blue-100 text-blue-700';
+          if (o.status === 'Đang xử lý') statusBadgeClass = 'bg-amber-100 text-amber-700';
+          if (o.status === 'Đã hoàn tất') statusBadgeClass = 'bg-emerald-100 text-emerald-700';
+          if (o.status === 'Đã trả khách') statusBadgeClass = 'bg-slate-200 text-slate-700';
 
-            <div>
-              <div class="font-bold text-slate-800 text-sm">${o.deviceName}</div>
-              <div class="text-slate-500">Khách: ${o.customerName} - ${o.phone}</div>
-              <div class="text-slate-500">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0}T</div>
-              <div class="text-[10px] text-slate-400">Thời gian: ${formatDateTime(o.receivedDate)}</div>
-            </div>
+          const images = [...(o.inImages || []), ...(o.outImages || [])];
 
-            <div class="flex gap-2 pt-1 border-t">
-              <button onclick='openPrintModal(${JSON.stringify(o)})' class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold">🖨️ Tem QR / In</button>
-              <button onclick="deleteOrder('${o._id}')" class="text-red-500 text-[10px] ml-auto">Xóa</button>
+          return `
+            <div class="border rounded-xl p-3 bg-white shadow-sm space-y-2.5 text-xs">
+              <!-- Hàng đầu: Mã đơn & Trạng thái -->
+              <div class="flex justify-between items-center border-b pb-2">
+                <span class="font-black text-blue-600 text-sm">${o.orderCode}</span>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${statusBadgeClass}">
+                  ${o.status || 'Đang tiếp nhận'}
+                </span>
+              </div>
+
+              <!-- Thông tin chi tiết -->
+              <div class="space-y-1">
+                <div class="font-bold text-slate-800 text-sm">${o.deviceName}</div>
+                <div class="text-slate-600">Khách: <strong>${o.customerName}</strong> - ${o.phone}</div>
+                <div class="text-slate-500 text-[11px]">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0} Tháng</div>
+                ${o.issueDescription ? `<div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-600 mt-1">Lỗi: ${o.issueDescription}</div>` : ''}
+                <div class="text-[10px] text-slate-400">Thời gian nhận: ${formatDateTime(o.receivedDate)}</div>
+              </div>
+
+              <!-- Hiển thị Hình ảnh thiết bị -->
+              ${images.length > 0 ? `
+                <div class="pt-1">
+                  <div class="text-[10px] font-bold text-slate-400 mb-1">Hình ảnh thiết bị (${images.length}):</div>
+                  <div class="flex gap-1.5 overflow-x-auto pb-1">
+                    ${images.map(img => `
+                      <a href="${img}" target="_blank" class="block flex-shrink-0">
+                        <img src="${img}" class="w-12 h-12 object-cover rounded-lg border hover:opacity-80">
+                      </a>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Nút Thao Tác -->
+              <div class="flex gap-2 pt-2 border-t">
+                <button onclick="openEditModal(${index})" class="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold active:scale-95">✏️ Sửa Phiếu</button>
+                <button onclick="openPrintModalByIndex(${index})" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold active:scale-95">🖨️ Tem QR / In</button>
+                <button onclick="deleteOrder('${o._id}')" class="text-red-500 text-[11px] font-bold ml-auto px-2">Xóa</button>
+              </div>
             </div>
-          </div>
-        `).join('');
-      } catch (err) {}
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Lỗi tải phiếu:", err);
+      }
     }
 
+    // Mở Modal Chỉnh Sửa Thông Tin
+    function openEditModal(index) {
+      const order = currentOrders[index];
+      if (!order) return;
+
+      document.getElementById('editOrderId').value = order._id;
+      document.getElementById('editOrderCode').innerText = `(${order.orderCode})`;
+      document.getElementById('editStatus').value = order.status || 'Đang tiếp nhận';
+      document.getElementById('editCustomerName').value = order.customerName || '';
+      document.getElementById('editPhone').value = order.phone || '';
+      document.getElementById('editDeviceName').value = order.deviceName || '';
+      document.getElementById('editImei').value = order.imei || '';
+      document.getElementById('editWarrantyPeriod').value = order.warrantyPeriod || 0;
+      document.getElementById('editIssueDescription').value = order.issueDescription || '';
+
+      editUploadedImageUrls = order.inImages || [];
+      document.getElementById('editInImages').value = editUploadedImageUrls.join(',');
+      renderPreview('editUploadPreview', editUploadedImageUrls);
+
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    // Lưu Cập Nhật Chỉnh Sửa
+    async function saveEditOrder(e) {
+      e.preventDefault();
+      const id = document.getElementById('editOrderId').value;
+      const inImagesRaw = document.getElementById('editInImages').value;
+
+      const updatedData = {
+        status: document.getElementById('editStatus').value,
+        customerName: document.getElementById('editCustomerName').value.trim(),
+        phone: document.getElementById('editPhone').value.trim(),
+        deviceName: document.getElementById('editDeviceName').value.trim(),
+        imei: document.getElementById('editImei').value.trim(),
+        warrantyPeriod: Number(document.getElementById('editWarrantyPeriod').value),
+        issueDescription: document.getElementById('editIssueDescription').value.trim(),
+        inImages: inImagesRaw ? inImagesRaw.split(',') : []
+      };
+
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+
+      if (res.ok) {
+        alert('✅ Cập nhật thông tin phiếu thành công!');
+        closeEditModal();
+        loadOrders();
+      } else {
+        alert('❌ Có lỗi xảy ra khi cập nhật!');
+      }
+    }
+
+    // Tạo đơn mới
     async function createOrder(e) {
       e.preventDefault();
       const inImagesRaw = document.getElementById('inImages').value;
@@ -279,7 +427,11 @@
       }
     }
 
-    function openPrintModal(order) {
+    // Modal Tem In & QR Tra Cứu
+    function openPrintModalByIndex(index) {
+      const order = currentOrders[index];
+      if (!order) return;
+
       document.getElementById('pOrderCode').innerText = order.orderCode;
       document.getElementById('pCustomer').innerText = order.customerName;
       document.getElementById('pPhone').innerText = order.phone;
@@ -307,16 +459,29 @@
       return `${timeStr} - ${dateStr}`;
     }
 
-    async function updateStatus(id, status) {
-      await fetch(`/api/admin/orders/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
+    async function checkHistory() {
+      const imei = document.getElementById('imei').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      if (!imei && !phone) return;
+
+      const res = await fetch(`/api/admin/history?imei=${encodeURIComponent(imei)}&phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+
+      const alertBox = document.getElementById('historyAlert');
+      const content = document.getElementById('historyContent');
+
+      if (data && data.length > 0) {
+        alertBox.classList.remove('hidden');
+        content.innerHTML = data.map(h => `
+          <div>• <strong>${h.orderCode}</strong> (${formatDateTime(h.receivedDate)}): ${h.deviceName} - <em>${h.status}</em></div>
+        `).join('');
+      } else {
+        alertBox.classList.add('hidden');
+      }
     }
 
     async function deleteOrder(id) {
-      if (confirm('Xóa phiếu này?')) {
+      if (confirm('Bạn có chắc chắn muốn xóa phiếu này?')) {
         await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' });
         loadOrders();
       }
