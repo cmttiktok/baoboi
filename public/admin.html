@@ -2,242 +2,303 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Quản Lý Sửa Chữa Tin Học & Điện Thoại Bảo Bối</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin Mobile</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    @media print {
+      body * { visibility: hidden; }
+      #printableTicket, #printableTicket * { visibility: visible; }
+      #printableTicket { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 md:p-6">
-  <div class="max-w-5xl mx-auto space-y-6">
-    
-    <!-- Header -->
-    <header class="bg-white p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-      <div>
-        <h1 class="text-xl font-bold text-slate-800">Quản Lý Sửa Chữa - Cửa Hàng Tin HọcBảo Bối</h1>
-        <p class="text-xs text-slate-500">Hệ thống tạo phiếu & tra cứu bảo hành</p>
-      </div>
-      <button onclick="toggleScanner()" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m0 14v1m8-8h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
-        </svg>
-        Mở Camera Quét IMEI
-      </button>
-    </header>
+<body class="bg-slate-100 min-h-screen pb-20">
 
-    <!-- Khu vực quét Camera -->
-    <div id="scannerContainer" class="hidden bg-white p-4 rounded-2xl shadow-sm max-w-md mx-auto text-center">
-      <div id="reader" class="overflow-hidden rounded-xl"></div>
-      <button onclick="toggleScanner()" class="mt-3 w-full bg-slate-200 text-slate-700 font-medium py-2 rounded-xl text-sm hover:bg-slate-300">Đóng Camera</button>
+  <!-- Header Sticky Admin -->
+  <div class="sticky top-0 z-40 bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+    <div>
+      <h1 class="text-sm font-extrabold text-blue-400">QUẢN LÝ QUY TRÌNH</h1>
+      <p class="text-[10px] text-slate-400">Tin Học & Điện Thoại Bảo Bối</p>
     </div>
+    <button onclick="loadOrders()" class="bg-slate-800 p-2 rounded-xl text-xs active:scale-95">🔄 Reload</button>
+  </div>
 
-    <!-- Form Nhập Đơn Mới -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm">
-      <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-        <span>📝</span> Tiếp Nhận Thiết Bị Mới
+  <div class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- Form Tiếp Nhận Mobile -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
+      <h2 class="text-sm font-bold text-slate-800 border-b pb-2 flex justify-between items-center">
+        <span>➕ Tạo Đơn / Lắp Đặt Mới</span>
+        <span class="text-[10px] font-normal text-slate-400">Chuẩn Mobile</span>
       </h2>
-      
-      <form id="orderForm" onsubmit="createOrder(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <form id="orderForm" onsubmit="createOrder(event)" class="space-y-3 text-xs">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Tên khách hàng <span class="text-red-500">*</span></label>
-          <input type="text" id="customerName" required placeholder="Nguyễn Văn A" class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Số điện thoại <span class="text-red-500">*</span></label>
-          <input type="text" id="phone" required placeholder="0901234567" class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Tên thiết bị <span class="text-red-500">*</span></label>
-          <input type="text" id="deviceName" required placeholder="iPhone 13 Pro / Laptop Dell XPS" class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Số IMEI / Serial Number</label>
-          <input type="text" id="imei" placeholder="Nhập tay hoặc quét camera..." class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-slate-700 mb-1">Tình trạng lỗi (Khách báo)</label>
-          <textarea id="issueDescription" rows="2" placeholder="Không lên nguồn, thay màn hình..." class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Tình trạng ngoại hình lúc nhận</label>
-          <input type="text" id="conditionNotes" placeholder="Trầy góc, trầy kính lưng..." class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Thời hạn bảo hành</label>
-          <select id="warrantyPeriod" class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="0">Không bảo hành</option>
-            <option value="3">3 Tháng</option>
-            <option value="6">6 Tháng</option>
-            <option value="12">12 Tháng</option>
+          <label class="font-semibold text-slate-600">Loại dịch vụ</label>
+          <select id="serviceType" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl font-medium">
+            <option value="Sửa chữa">🛠️ Sửa chữa thiết bị</option>
+            <option value="Lắp mới / Bán mới">📷 Lắp mới / Bán mới (Camera, PC...)</option>
           </select>
         </div>
-        <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-slate-700 mb-1">Ghi chú thêm (Nội bộ)</label>
-          <input type="text" id="notes" placeholder="Mật khẩu máy: 1234..." class="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-semibold text-slate-600">Tên khách *</label>
+            <input type="text" id="customerName" required placeholder="Nguyễn Văn A" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">SĐT *</label>
+            <input type="tel" id="phone" required onblur="checkHistory()" placeholder="0901234567" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+          </div>
         </div>
-        <div class="md:col-span-2 mt-2">
-          <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-xl transition flex items-center justify-center gap-2">
-            <span>Tạo Phiếu Nhận Máy</span>
-          </button>
+
+        <div>
+          <label class="font-semibold text-slate-600">Số IMEI / Serial</label>
+          <input type="text" id="imei" onblur="checkHistory()" placeholder="Nhập IMEI hoặc Serial máy..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
         </div>
+
+        <!-- Khung Cảnh Báo Lịch Sử Sửa Chữa Cũ (Tính năng 4) -->
+        <div id="historyAlert" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-[11px] text-amber-800">
+          <div class="font-bold flex items-center gap-1">⚠️ Cảnh báo lịch sử cũ:</div>
+          <div id="historyContent"></div>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-600">Tên thiết bị / Gói camera *</label>
+          <input type="text" id="deviceName" required placeholder="iPhone 13 / Gói 4 Cam Dahua" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-semibold text-slate-600">Bảo hành</label>
+            <select id="warrantyPeriod" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+              <option value="0">Không BH</option>
+              <option value="3">3 Tháng</option>
+              <option value="6">6 Tháng</option>
+              <option value="12" selected>12 Tháng</option>
+              <option value="24">24 Tháng</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">Ngoại hình máy</label>
+            <input type="text" id="conditionNotes" placeholder="Trầy xước..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+          </div>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-600">Mô tả lỗi / Yêu cầu</label>
+          <textarea id="issueDescription" rows="2" placeholder="Tình trạng máy lúc nhận..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl"></textarea>
+        </div>
+
+        <!-- Tải Ảnh Trực Tiếp Tối Ưu Cho Điện Thoại -->
+        <div>
+          <label class="font-semibold text-slate-600">Chụp / Chọn ảnh máy khi nhận</label>
+          <input type="file" id="imageInput" accept="image/*" capture="environment" multiple onchange="uploadImages(this)" class="w-full mt-1 text-xs">
+          <div id="uploadStatus" class="text-[10px] text-blue-600 mt-1"></div>
+          <input type="hidden" id="inImages">
+        </div>
+
+        <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl active:scale-95 transition">Tạo Phiếu Nhận Máy</button>
       </form>
     </div>
 
-    <!-- Danh Sách Đơn Sửa Chữa -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-slate-800">📋 Danh Sách Đơn Gần Đây</h2>
-        <button onclick="loadOrders()" class="text-sm text-blue-600 hover:underline">🔄 Tải lại</button>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b text-slate-500 text-xs uppercase bg-slate-50">
-              <th class="p-3">Mã đơn</th>
-              <th class="p-3">Khách hàng</th>
-              <th class="p-3">Thiết bị & IMEI</th>
-              <th class="p-3">Trạng thái</th>
-              <th class="p-3 text-center">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody id="orderTableBody" class="text-sm divide-y">
-            <tr><td colspan="5" class="p-4 text-center text-slate-400">Đang tải danh sách...</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Danh Sách Quản Lý Mobile -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
+      <h2 class="text-sm font-bold text-slate-800">📋 Danh Sách Đơn</h2>
+      <div id="orderList" class="space-y-3"></div>
     </div>
 
   </div>
 
-  <script>
-    let html5QrcodeScanner = null;
+  <!-- Modal In Phiếu & Mã QR Tem (Tính năng 1 & 2) -->
+  <div id="printModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-5 rounded-2xl max-w-xs w-full text-center space-y-4">
+      
+      <!-- Khung Phiếu In (Will be printed) -->
+      <div id="printableTicket" class="p-4 bg-white text-left space-y-2 text-xs border rounded-xl text-slate-800">
+        <div class="text-center border-b pb-2">
+          <div class="font-black text-sm">CỬA HÀNG TIN HỌC</div>
+          <div class="text-[10px] text-slate-500">PHIẾU TIẾP NHẬN & BẢO HÀNH</div>
+        </div>
+        <div><strong>Mã đơn:</strong> <span id="pOrderCode" class="font-bold"></span></div>
+        <div><strong>Khách hàng:</strong> <span id="pCustomer"></span></div>
+        <div><strong>SĐT:</strong> <span id="pPhone"></span></div>
+        <div><strong>Thiết bị:</strong> <span id="pDevice"></span></div>
+        <div><strong>IMEI/Serial:</strong> <span id="pImei"></span></div>
+        <div><strong>Bảo hành:</strong> <span id="pWarranty"></span></div>
+        <div class="flex justify-center pt-2">
+          <div id="qrcode"></div>
+        </div>
+        <div class="text-[9px] text-center text-slate-400 mt-1">Quét mã QR để tra cứu bảo hành</div>
+      </div>
 
-    // Quét IMEI qua Camera
-    function toggleScanner() {
-      const container = document.getElementById('scannerContainer');
-      container.classList.toggle('hidden');
-      if (!container.classList.contains('hidden')) {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render((decodedText) => {
-          document.getElementById('imei').value = decodedText;
-          toggleScanner();
-          html5QrcodeScanner.clear();
-        });
-      } else if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
+      <div class="flex gap-2">
+        <button onclick="window.print()" class="flex-1 bg-blue-600 text-white py-2 rounded-xl text-xs font-bold">🖨️ In Phiếu</button>
+        <button onclick="closePrintModal()" class="flex-1 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let uploadedImageUrls = [];
+
+    // Tải ảnh trực tiếp lên host ImgBB miễn phí
+    async function uploadImages(input) {
+      const files = input.files;
+      if (!files.length) return;
+      
+      const statusDiv = document.getElementById('uploadStatus');
+      statusDiv.innerText = '⏳ Đang tải ảnh lên...';
+
+      const apiKey = 'd86161df7976c66cf17f0e9f8dfc7a76'; // Public Demo Key
+
+      for (let file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+          const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.success) {
+            uploadedImageUrls.push(data.data.url);
+          }
+        } catch (e) {}
+      }
+
+      document.getElementById('inImages').value = uploadedImageUrls.join(',');
+      statusDiv.innerText = `✅ Đã tải ${uploadedImageUrls.length} ảnh!`;
+    }
+
+    // Kiểm tra lịch sử sửa chữa lặp lại (Tính năng 4)
+    async function checkHistory() {
+      const imei = document.getElementById('imei').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      if (!imei && !phone) return;
+
+      const res = await fetch(`/api/admin/history?imei=${encodeURIComponent(imei)}&phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+
+      const alertBox = document.getElementById('historyAlert');
+      const content = document.getElementById('historyContent');
+
+      if (data && data.length > 0) {
+        alertBox.classList.remove('hidden');
+        content.innerHTML = data.map(h => `
+          <div>• <strong>${h.orderCode}</strong> (${new Date(h.receivedDate).toLocaleDateString('vi-VN')}): ${h.deviceName} - <em>${h.status}</em></div>
+        `).join('');
+      } else {
+        alertBox.classList.add('hidden');
       }
     }
 
-    // Load danh sách đơn sửa chữa
     async function loadOrders() {
-      const tbody = document.getElementById('orderTableBody');
+      const list = document.getElementById('orderList');
       try {
         const res = await fetch('/api/admin/orders');
         const orders = await res.json();
-        
-        if (!orders || orders.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">Chưa có đơn hàng nào</td></tr>';
+
+        if (!orders.length) {
+          list.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Chưa có đơn nào</div>';
           return;
         }
 
-        tbody.innerHTML = orders.map(o => `
-          <tr class="hover:bg-slate-50">
-            <td class="p-3 font-semibold text-blue-600">${o.orderCode || 'N/A'}</td>
-            <td class="p-3">
-              <div class="font-medium text-slate-800">${o.customerName}</div>
-              <div class="text-xs text-slate-400">${o.phone}</div>
-            </td>
-            <td class="p-3">
-              <div class="font-medium text-slate-800">${o.deviceName}</div>
-              <div class="text-xs text-slate-400">${o.imei || 'Không có IMEI'}</div>
-            </td>
-            <td class="p-3">
-              <select onchange="updateStatus('${o._id}', this.value)" class="text-xs border rounded-lg p-1.5 bg-white focus:ring-2 focus:ring-blue-500">
+        list.innerHTML = orders.map(o => `
+          <div class="border rounded-xl p-3 bg-slate-50 space-y-2 text-xs">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-blue-600">${o.orderCode}</span>
+              <select onchange="updateStatus('${o._id}', this.value)" class="text-[11px] border rounded p-1 bg-white font-medium">
                 <option value="Đang tiếp nhận" ${o.status === 'Đang tiếp nhận' ? 'selected' : ''}>Đang tiếp nhận</option>
-                <option value="Đang sửa chữa" ${o.status === 'Đang sửa chữa' ? 'selected' : ''}>Đang sửa chữa</option>
+                <option value="Đang xử lý" ${o.status === 'Đang xử lý' ? 'selected' : ''}>Đang xử lý</option>
                 <option value="Đã hoàn tất" ${o.status === 'Đã hoàn tất' ? 'selected' : ''}>Đã hoàn tất</option>
                 <option value="Đã trả khách" ${o.status === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
               </select>
-            </td>
-            <td class="p-3 text-center">
-              <button onclick="deleteOrder('${o._id}')" class="text-red-500 hover:text-red-700 font-medium text-xs">Xóa</button>
-            </td>
-          </tr>
+            </div>
+
+            <div>
+              <div class="font-bold text-slate-800 text-sm">${o.deviceName}</div>
+              <div class="text-slate-500">Khách: ${o.customerName} - ${o.phone}</div>
+              <div class="text-slate-500">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0}T</div>
+            </div>
+
+            <div class="flex gap-2 pt-1 border-t">
+              <button onclick='openPrintModal(${JSON.stringify(o)})' class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold">🖨️ Tem QR / In</button>
+              <button onclick="deleteOrder('${o._id}')" class="text-red-500 text-[10px] ml-auto">Xóa</button>
+            </div>
+          </div>
         `).join('');
-      } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Lỗi kết nối máy chủ: ${err.message}</td></tr>`;
-      }
+      } catch (err) {}
     }
 
-    // Tạo đơn sửa chữa mới
     async function createOrder(e) {
       e.preventDefault();
-      
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '⏳ Đang lưu...';
-
+      const inImagesRaw = document.getElementById('inImages').value;
       const bodyData = {
+        serviceType: document.getElementById('serviceType').value,
         customerName: document.getElementById('customerName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         deviceName: document.getElementById('deviceName').value.trim(),
         imei: document.getElementById('imei').value.trim(),
-        issueDescription: document.getElementById('issueDescription').value.trim(),
+        warrantyPeriod: Number(document.getElementById('warrantyPeriod').value),
         conditionNotes: document.getElementById('conditionNotes').value.trim(),
-        warrantyPeriod: document.getElementById('warrantyPeriod').value,
-        notes: document.getElementById('notes').value.trim()
+        issueDescription: document.getElementById('issueDescription').value.trim(),
+        inImages: inImagesRaw ? inImagesRaw.split(',') : []
       };
 
-      try {
-        const res = await fetch('/api/admin/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyData)
-        });
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyData)
+      });
 
-        const result = await res.json();
-
-        if (res.ok && result.success) {
-          alert('✅ Tạo phiếu nhận máy thành công!');
-          document.getElementById('orderForm').reset();
-          loadOrders();
-        } else {
-          alert('❌ Lỗi tạo đơn: ' + (result.error || 'Vui lòng kiểm tra lại thông tin'));
-        }
-      } catch (err) {
-        alert('❌ Lỗi kết nối mạng: ' + err.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>Tạo Phiếu Nhận Máy</span>';
+      if (res.ok) {
+        alert('✅ Tạo thành công!');
+        document.getElementById('orderForm').reset();
+        uploadedImageUrls = [];
+        document.getElementById('uploadStatus').innerText = '';
+        document.getElementById('historyAlert').classList.add('hidden');
+        loadOrders();
       }
     }
 
-    // Cập nhật trạng thái
+    // In tem QR & Phiếu (Tính năng 1 & 2)
+    function openPrintModal(order) {
+      document.getElementById('pOrderCode').innerText = order.orderCode;
+      document.getElementById('pCustomer').innerText = order.customerName;
+      document.getElementById('pPhone').innerText = order.phone;
+      document.getElementById('pDevice').innerText = order.deviceName;
+      document.getElementById('pImei').innerText = order.imei || 'N/A';
+      document.getElementById('pWarranty').innerText = (order.warrantyPeriod || 0) + ' Tháng';
+
+      document.getElementById('qrcode').innerHTML = '';
+      // Link tra cứu tự động cho mã QR
+      const searchUrl = `${window.location.origin}/index.html?code=${order.orderCode}`;
+      new QRCode(document.getElementById("qrcode"), { text: searchUrl, width: 90, height: 90 });
+
+      document.getElementById('printModal').classList.remove('hidden');
+    }
+
+    function closePrintModal() {
+      document.getElementById('printModal').classList.add('hidden');
+    }
+
     async function updateStatus(id, status) {
-      try {
-        await fetch(`/api/admin/orders/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
-        });
-      } catch (err) {
-        alert('Lỗi cập nhật trạng thái: ' + err.message);
-      }
+      await fetch(`/api/admin/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
     }
 
-    // Xóa đơn hàng
     async function deleteOrder(id) {
-      if (!confirm('Bạn có chắc chắn muốn xóa đơn này không?')) return;
-      try {
-        const res = await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-          loadOrders();
-        }
-      } catch (err) {
-        alert('Lỗi xóa đơn: ' + err.message);
+      if (confirm('Xóa phiếu này?')) {
+        await fetch(`/api/admin/orders/${id}`, { method: 'DELETE' });
+        loadOrders();
       }
     }
 
-    // Tải danh sách đơn khi mở trang
     loadOrders();
   </script>
 </body>
