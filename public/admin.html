@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Quản Lý Sửa Chữa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6">
+  <div class="max-w-5xl mx-auto space-y-8">
+    <header class="bg-white p-6 rounded-2xl shadow-sm flex justify-between items-center">
+      <h1 class="text-xl font-bold text-slate-800">Quản Lý Sửa Chữa - Cửa Hàng Tin Học & Điện Thoại</h1>
+      <button onclick="toggleScanner()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700">Mở Camera Quét IMEI</button>
+    </header>
+
+    <!-- Khu vực quét Camera -->
+    <div id="scannerContainer" class="hidden bg-white p-4 rounded-2xl shadow-sm max-w-md mx-auto">
+      <div id="reader"></div>
+      <button onclick="toggleScanner()" class="mt-3 w-full bg-red-500 text-white py-2 rounded-xl text-sm">Đóng Camera</button>
+    </div>
+
+    <!-- Form Nhập Đơn Mới -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">Tiếp Nhận Máy Mới</h2>
+      <form id="orderForm" onsubmit="createOrder(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tên khách hàng</label>
+          <input type="text" id="customerName" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Số điện thoại</label>
+          <input type="text" id="phone" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tên thiết bị (VD: iPhone 13, Dell Inspiron)</label>
+          <input type="text" id="deviceName" required class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Số IMEI / Serial (Chứa cả chữ & số)</label>
+          <input type="text" id="imei" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tình trạng lỗi khách báo</label>
+          <textarea id="issueDescription" rows="2" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Ngoại hình máy lúc nhận (Móp, trầy, vỡ...)</label>
+          <input type="text" id="conditionNotes" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Thời hạn bảo hành</label>
+          <select id="warrantyPeriod" class="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+            <option value="0">Không bảo hành</option>
+            <option value="3">3 tháng</option>
+            <option value="6">6 tháng</option>
+            <option value="12">12 tháng</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700">Tạo Phiếu Nhận Máy</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Danh Sách Đơn Sửa Chữa -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">Danh Sách Đơn Hàng Gần Đây</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b text-slate-500 text-sm">
+              <th class="p-3">Mã đơn</th>
+              <th class="p-3">Khách hàng</th>
+              <th class="p-3">Thiết bị / IMEI</th>
+              <th class="p-3">Trạng thái</th>
+              <th class="p-3">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="orderTableBody" class="text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let html5QrcodeScanner = null;
+
+    function toggleScanner() {
+      const container = document.getElementById('scannerContainer');
+      container.classList.toggle('hidden');
+      if (!container.classList.contains('hidden')) {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render((decodedText) => {
+          document.getElementById('imei').value = decodedText;
+          toggleScanner();
+          html5QrcodeScanner.clear();
+        });
+      } else if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
+      }
+    }
+
+    async function loadOrders() {
+      const res = await fetch('/api/admin/orders');
+      const orders = await res.json();
+      const tbody = document.getElementById('orderTableBody');
+      
+      tbody.innerHTML = orders.map(o => `
+        <tr class="border-b hover:bg-slate-50">
+          <td class="p-3 font-semibold text-blue-600">${o.orderCode}</td>
+          <td class="p-3">${o.customerName}<br><span class="text-xs text-slate-400">${o.phone}</span></td>
+          <td class="p-3">${o.deviceName}<br><span class="text-xs text-slate-400">${o.imei || 'N/A'}</span></td>
+          <td class="p-3">
+            <select onchange="updateStatus('${o._id}', this.value)" class="text-xs border rounded p-1">
+              <option ${o.status === 'Đang tiếp nhận' ? 'selected' : ''}>Đang tiếp nhận</option>
+              <option ${o.status === 'Đang sửa chữa' ? 'selected' : ''}>Đang sửa chữa</option>
+              <option ${o.status === 'Đã hoàn tất' ? 'selected' : ''}>Đã hoàn tất</option>
+              <option ${o.status === 'Đã trả khách' ? 'selected' : ''}>Đã trả khách</option>
+            </select>
+          </td>
+          <td class="p-3">
+            <button onclick="deleteOrder('${o._id}')" class="text-red-500 hover:underline text-xs">Xóa</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function createOrder(e) {
+      e.preventDefault();
+      const body = {
+        customerName: document.getElementById('customerName').value,
+        phone: document.getElementById('phone').value,
+        deviceName: document.getElementById('deviceName').value,
+        imei: document.getElementById('imei').value,
+        issueDescription: document.getElementById('issueDescription').value,
+        conditionNotes: document.getElementById('conditionNotes').value,
+        warrantyPeriod: document.getElementById('warrantyPeriod').value
+      };
+
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        alert('Tạo phiếu thành công!');
+        document.getElementById('orderForm').reset();
+        loadOrders();
+      }
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`/api/admin/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+    }
+
+    loadOrders();
+  </script>
+</body>
+</html>
