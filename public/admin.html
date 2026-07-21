@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Admin Mobile</title>
+  <title>TIN HỌC BẢO BỐI - Quản Lý Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Widget Upload Cloudinary -->
+  <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
   <style>
     body { -webkit-tap-highlight-color: transparent; }
     @media print {
@@ -20,8 +22,8 @@
   <!-- Header Sticky Admin -->
   <div class="sticky top-0 z-40 bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
     <div>
-      <h1 class="text-sm font-extrabold text-blue-400">QUẢN LÝ QUY TRÌNH</h1>
-      <p class="text-[10px] text-slate-400">Tin Học & Điện Thoại Bảo Bối</p>
+      <h1 class="text-sm font-extrabold text-blue-400">TIN HỌC BẢO BỐI</h1>
+      <p class="text-[10px] text-slate-400">Hệ Thống Quản Lý Sửa Chữa & Lắp Đặt</p>
     </div>
     <button onclick="loadOrders()" class="bg-slate-800 p-2 rounded-xl text-xs active:scale-95">🔄 Reload</button>
   </div>
@@ -32,7 +34,7 @@
     <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
       <h2 class="text-sm font-bold text-slate-800 border-b pb-2 flex justify-between items-center">
         <span>➕ Tạo Đơn / Lắp Đặt Mới</span>
-        <span class="text-[10px] font-normal text-slate-400">Chuẩn Mobile</span>
+        <span class="text-[10px] font-normal text-slate-400">Mobile Admin</span>
       </h2>
 
       <form id="orderForm" onsubmit="createOrder(event)" class="space-y-3 text-xs">
@@ -42,6 +44,11 @@
             <option value="Sửa chữa">🛠️ Sửa chữa thiết bị</option>
             <option value="Lắp mới / Bán mới">📷 Lắp mới / Bán mới (Camera, PC...)</option>
           </select>
+        </div>
+
+        <div>
+          <label class="font-semibold text-slate-600">Ngày giờ nhận / lắp đặt</label>
+          <input type="datetime-local" id="receivedDate" step="1" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl font-medium">
         </div>
 
         <div class="grid grid-cols-2 gap-2">
@@ -60,9 +67,9 @@
           <input type="text" id="imei" onblur="checkHistory()" placeholder="Nhập IMEI hoặc Serial máy..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
         </div>
 
-        <!-- Khung Cảnh Báo Lịch Sử Sửa Chữa Cũ (Tính năng 4) -->
+        <!-- Cảnh Báo Lịch Sử Sửa Chữa Cũ -->
         <div id="historyAlert" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-[11px] text-amber-800">
-          <div class="font-bold flex items-center gap-1">⚠️ Cảnh báo lịch sử cũ:</div>
+          <div class="font-bold flex items-center gap-1">⚠️ Lịch sử thiết bị / SĐT cũ:</div>
           <div id="historyContent"></div>
         </div>
 
@@ -80,6 +87,7 @@
               <option value="6">6 Tháng</option>
               <option value="12" selected>12 Tháng</option>
               <option value="24">24 Tháng</option>
+              <option value="36">36 Tháng</option>
             </select>
           </div>
           <div>
@@ -93,11 +101,13 @@
           <textarea id="issueDescription" rows="2" placeholder="Tình trạng máy lúc nhận..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl"></textarea>
         </div>
 
-        <!-- Tải Ảnh Trực Tiếp Tối Ưu Cho Điện Thoại -->
+        <!-- Upload Ảnh Trực Tiếp Bằng Cloudinary -->
         <div>
-          <label class="font-semibold text-slate-600">Chụp / Chọn ảnh máy khi nhận</label>
-          <input type="file" id="imageInput" accept="image/*" capture="environment" multiple onchange="uploadImages(this)" class="w-full mt-1 text-xs">
-          <div id="uploadStatus" class="text-[10px] text-blue-600 mt-1"></div>
+          <label class="font-semibold text-slate-600 block mb-1">Hình ảnh thiết bị lúc nhận</label>
+          <button type="button" onclick="openCloudinaryWidget()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2">
+            📸 Chụp / Chọn Ảnh Tải Lên
+          </button>
+          <div id="uploadPreview" class="flex gap-2 overflow-x-auto mt-2"></div>
           <input type="hidden" id="inImages">
         </div>
 
@@ -107,27 +117,28 @@
 
     <!-- Danh Sách Quản Lý Mobile -->
     <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
-      <h2 class="text-sm font-bold text-slate-800">📋 Danh Sách Đơn</h2>
+      <h2 class="text-sm font-bold text-slate-800">📋 Danh Sách Đơn Gần Đây</h2>
       <div id="orderList" class="space-y-3"></div>
     </div>
 
   </div>
 
-  <!-- Modal In Phiếu & Mã QR Tem (Tính năng 1 & 2) -->
+  <!-- Modal In Phiếu & Mã QR Tem -->
   <div id="printModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white p-5 rounded-2xl max-w-xs w-full text-center space-y-4">
       
-      <!-- Khung Phiếu In (Will be printed) -->
+      <!-- Khung Phiếu In -->
       <div id="printableTicket" class="p-4 bg-white text-left space-y-2 text-xs border rounded-xl text-slate-800">
         <div class="text-center border-b pb-2">
-          <div class="font-black text-sm">CỬA HÀNG TIN HỌC</div>
+          <div class="font-black text-base text-blue-600">TIN HỌC BẢO BỐI</div>
           <div class="text-[10px] text-slate-500">PHIẾU TIẾP NHẬN & BẢO HÀNH</div>
         </div>
-        <div><strong>Mã đơn:</strong> <span id="pOrderCode" class="font-bold"></span></div>
+        <div><strong>Mã đơn:</strong> <span id="pOrderCode" class="font-bold text-blue-600"></span></div>
         <div><strong>Khách hàng:</strong> <span id="pCustomer"></span></div>
         <div><strong>SĐT:</strong> <span id="pPhone"></span></div>
         <div><strong>Thiết bị:</strong> <span id="pDevice"></span></div>
         <div><strong>IMEI/Serial:</strong> <span id="pImei"></span></div>
+        <div><strong>Thời gian nhận:</strong> <span id="pReceivedTime"></span></div>
         <div><strong>Bảo hành:</strong> <span id="pWarranty"></span></div>
         <div class="flex justify-center pt-2">
           <div id="qrcode"></div>
@@ -145,34 +156,36 @@
   <script>
     let uploadedImageUrls = [];
 
-    // Tải ảnh trực tiếp lên host ImgBB miễn phí
-    async function uploadImages(input) {
-      const files = input.files;
-      if (!files.length) return;
-      
-      const statusDiv = document.getElementById('uploadStatus');
-      statusDiv.innerText = '⏳ Đang tải ảnh lên...';
+    // Cấu hình mặc định ô Ngày giờ giờ phút giây hiện tại
+    function setNowDateTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('receivedDate').value = now.toISOString().slice(0, 19);
+    }
+    setNowDateTime();
 
-      const apiKey = 'd86161df7976c66cf17f0e9f8dfc7a76'; // Public Demo Key
-
-      for (let file of files) {
-        const formData = new FormData();
-        formData.append('image', file);
-
-        try {
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: 'POST', body: formData });
-          const data = await res.json();
-          if (data.success) {
-            uploadedImageUrls.push(data.data.url);
-          }
-        } catch (e) {}
-      }
-
-      document.getElementById('inImages').value = uploadedImageUrls.join(',');
-      statusDiv.innerText = `✅ Đã tải ${uploadedImageUrls.length} ảnh!`;
+    // Widget Upload Cloudinary (Demo Cloud Name)
+    function openCloudinaryWidget() {
+      cloudinary.openUploadWidget({
+        cloudName: 'demo', 
+        uploadPreset: 'docs_upload_example_us_preset',
+        sources: ['local', 'camera'],
+        multiple: true,
+        maxFiles: 5
+      }, (error, result) => {
+        if (!error && result && result.event === "success") {
+          uploadedImageUrls.push(result.info.secure_url);
+          document.getElementById('inImages').value = uploadedImageUrls.join(',');
+          
+          // Preview ảnh vừa upload
+          const preview = document.getElementById('uploadPreview');
+          preview.innerHTML = uploadedImageUrls.map(url => `
+            <img src="${url}" class="w-12 h-12 object-cover rounded-lg border">
+          `).join('');
+        }
+      });
     }
 
-    // Kiểm tra lịch sử sửa chữa lặp lại (Tính năng 4)
     async function checkHistory() {
       const imei = document.getElementById('imei').value.trim();
       const phone = document.getElementById('phone').value.trim();
@@ -187,7 +200,7 @@
       if (data && data.length > 0) {
         alertBox.classList.remove('hidden');
         content.innerHTML = data.map(h => `
-          <div>• <strong>${h.orderCode}</strong> (${new Date(h.receivedDate).toLocaleDateString('vi-VN')}): ${h.deviceName} - <em>${h.status}</em></div>
+          <div>• <strong>${h.orderCode}</strong> (${formatDateTime(h.receivedDate)}): ${h.deviceName} - <em>${h.status}</em></div>
         `).join('');
       } else {
         alertBox.classList.add('hidden');
@@ -221,6 +234,7 @@
               <div class="font-bold text-slate-800 text-sm">${o.deviceName}</div>
               <div class="text-slate-500">Khách: ${o.customerName} - ${o.phone}</div>
               <div class="text-slate-500">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0}T</div>
+              <div class="text-[10px] text-slate-400">Thời gian: ${formatDateTime(o.receivedDate)}</div>
             </div>
 
             <div class="flex gap-2 pt-1 border-t">
@@ -237,6 +251,7 @@
       const inImagesRaw = document.getElementById('inImages').value;
       const bodyData = {
         serviceType: document.getElementById('serviceType').value,
+        receivedDate: document.getElementById('receivedDate').value,
         customerName: document.getElementById('customerName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         deviceName: document.getElementById('deviceName').value.trim(),
@@ -254,26 +269,26 @@
       });
 
       if (res.ok) {
-        alert('✅ Tạo thành công!');
+        alert('✅ Tạo phiếu thành công!');
         document.getElementById('orderForm').reset();
         uploadedImageUrls = [];
-        document.getElementById('uploadStatus').innerText = '';
+        document.getElementById('uploadPreview').innerHTML = '';
         document.getElementById('historyAlert').classList.add('hidden');
+        setNowDateTime();
         loadOrders();
       }
     }
 
-    // In tem QR & Phiếu (Tính năng 1 & 2)
     function openPrintModal(order) {
       document.getElementById('pOrderCode').innerText = order.orderCode;
       document.getElementById('pCustomer').innerText = order.customerName;
       document.getElementById('pPhone').innerText = order.phone;
       document.getElementById('pDevice').innerText = order.deviceName;
       document.getElementById('pImei').innerText = order.imei || 'N/A';
+      document.getElementById('pReceivedTime').innerText = formatDateTime(order.receivedDate);
       document.getElementById('pWarranty').innerText = (order.warrantyPeriod || 0) + ' Tháng';
 
       document.getElementById('qrcode').innerHTML = '';
-      // Link tra cứu tự động cho mã QR
       const searchUrl = `${window.location.origin}/index.html?code=${order.orderCode}`;
       new QRCode(document.getElementById("qrcode"), { text: searchUrl, width: 90, height: 90 });
 
@@ -282,6 +297,14 @@
 
     function closePrintModal() {
       document.getElementById('printModal').classList.add('hidden');
+    }
+
+    function formatDateTime(d) {
+      if (!d) return 'N/A';
+      const date = new Date(d);
+      const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = date.toLocaleDateString('vi-VN');
+      return `${timeStr} - ${dateStr}`;
     }
 
     async function updateStatus(id, status) {
