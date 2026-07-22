@@ -29,9 +29,9 @@
 
   <div class="max-w-md mx-auto p-4 space-y-4">
 
-    <!-- [NÂNG CẤP 3] Thống Kê Nhanh Tháng Hiện Tại -->
+    <!-- Thống Kê Nhanh -->
     <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 rounded-2xl shadow-sm space-y-2">
-      <div class="text-[11px] font-bold uppercase opacity-80">📊 Báo Cáo Thống Kê Tháng Này</div>
+      <div class="text-[11px] font-bold uppercase opacity-80">📊 Báo Cáo Thống Kê</div>
       <div class="grid grid-cols-3 gap-2 text-center pt-1">
         <div class="bg-white/10 p-2 rounded-xl">
           <div class="text-[10px] opacity-80">Tổng Đơn</div>
@@ -85,7 +85,6 @@
           <input type="text" id="imei" onblur="checkHistory()" placeholder="Nhập IMEI hoặc Serial máy..." class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
         </div>
 
-        <!-- Cảnh báo lịch sử cũ -->
         <div id="historyAlert" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1 text-[11px] text-amber-800">
           <div class="font-bold flex items-center gap-1">⚠️ Lịch sử thiết bị / SĐT cũ:</div>
           <div id="historyContent"></div>
@@ -96,7 +95,7 @@
           <input type="text" id="deviceName" required placeholder="iPhone 13 / Gói 4 Cam Dahua" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
         </div>
 
-        <!-- [NÂNG CẤP 4] Quản lý Chi phí & Linh kiện -->
+        <!-- Quản lý Chi phí & Linh kiện -->
         <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border">
           <div>
             <label class="font-semibold text-slate-600">Giá vốn linh kiện (đ)</label>
@@ -189,14 +188,14 @@
           <input type="text" id="editDeviceName" required class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
         </div>
 
-        <!-- [NÂNG CẤP 4] Sửa Chi Phí Chi Tiết -->
+        <!-- Sửa Chi Phí Chi Tiết -->
         <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded-lg border">
           <div>
             <label class="font-semibold text-slate-600">Giá Vốn (đ)</label>
             <input type="number" id="editCostPrice" class="w-full mt-1 p-2 bg-white border rounded-lg">
           </div>
           <div>
-            <label class="font-semibold text-slate-600">Giá Khách (đ)</label>
+            <label class="font-semibold text-slate-600">Giá Báo Khách (đ)</label>
             <input type="number" id="editSellingPrice" class="w-full mt-1 p-2 bg-white border rounded-lg">
           </div>
         </div>
@@ -268,7 +267,6 @@
     let uploadedImageUrls = [];
     let editUploadedImageUrls = [];
 
-    // Tự động set thời gian hiện tại chuẩn cho input datetime-local
     function setNowDateTime() {
       const now = new Date();
       const year = now.getFullYear();
@@ -319,7 +317,6 @@
         const res = await fetch('/api/admin/orders');
         currentOrders = await res.json();
 
-        // Tính toán thống kê báo cáo (Nâng cấp 3)
         calculateStats(currentOrders);
 
         if (!currentOrders.length) {
@@ -334,7 +331,10 @@
           if (o.status === 'Đã trả khách') statusBadgeClass = 'bg-slate-200 text-slate-700';
 
           const images = [...(o.inImages || []), ...(o.outImages || [])];
-          const profit = (o.sellingPrice || 0) - (o.costPrice || 0);
+          
+          const sellingPrice = parseFloat(o.sellingPrice) || 0;
+          const costPrice = parseFloat(o.costPrice) || 0;
+          const profit = sellingPrice - costPrice;
 
           return `
             <div class="border rounded-xl p-3 bg-white shadow-sm space-y-2.5 text-xs">
@@ -350,13 +350,12 @@
                 <div class="text-slate-600">Khách: <strong>${o.customerName}</strong> - ${o.phone}</div>
                 <div class="text-slate-500 text-[11px]">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0} Tháng</div>
                 
-                <!-- Bổ sung hiển thị Giá & Lợi Nhuận -->
-                ${(o.sellingPrice > 0) ? `
-                  <div class="bg-emerald-50 p-2 rounded-lg text-[11px] text-emerald-800 flex justify-between font-bold">
-                    <span>Giá: ${(o.sellingPrice).toLocaleString()}đ</span>
-                    <span>Lãi: ${(profit).toLocaleString()}đ</span>
-                  </div>
-                ` : ''}
+                <!-- Hiển thị Giá & Lợi Nhuận -->
+                <div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-700 flex justify-between font-bold border">
+                  <span>Giá bán: <strong class="text-blue-600">${sellingPrice.toLocaleString()}đ</strong></span>
+                  <span>Giá vốn: <strong>${costPrice.toLocaleString()}đ</strong></span>
+                  <span>Lãi: <strong class="text-emerald-600">${profit.toLocaleString()}đ</strong></span>
+                </div>
 
                 ${o.issueDescription ? `<div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-600 mt-1">Lỗi: ${o.issueDescription}</div>` : ''}
                 <div class="text-[10px] text-slate-400">Thời gian nhận: ${formatDateTime(o.receivedDate)}</div>
@@ -388,15 +387,14 @@
       }
     }
 
-    // Tính toán Thống kê Báo cáo Doanh thu & Lợi nhuận
     function calculateStats(orders) {
       document.getElementById('statTotalOrders').innerText = orders.length;
       let totalRevenue = 0;
       let totalProfit = 0;
 
       orders.forEach(o => {
-        const selling = Number(o.sellingPrice) || 0;
-        const cost = Number(o.costPrice) || 0;
+        const selling = parseFloat(o.sellingPrice) || 0;
+        const cost = parseFloat(o.costPrice) || 0;
         totalRevenue += selling;
         totalProfit += (selling - cost);
       });
@@ -415,8 +413,11 @@
       document.getElementById('editCustomerName').value = order.customerName || '';
       document.getElementById('editPhone').value = order.phone || '';
       document.getElementById('editDeviceName').value = order.deviceName || '';
-      document.getElementById('editCostPrice').value = order.costPrice || 0;
-      document.getElementById('editSellingPrice').value = order.sellingPrice || 0;
+
+      // Đọc chính xác thuộc tính số
+      document.getElementById('editCostPrice').value = order.costPrice !== undefined ? order.costPrice : 0;
+      document.getElementById('editSellingPrice').value = order.sellingPrice !== undefined ? order.sellingPrice : 0;
+
       document.getElementById('editImei').value = order.imei || '';
       document.getElementById('editWarrantyPeriod').value = order.warrantyPeriod || 0;
       document.getElementById('editIssueDescription').value = order.issueDescription || '';
@@ -437,13 +438,16 @@
       const id = document.getElementById('editOrderId').value;
       const inImagesRaw = document.getElementById('editInImages').value;
 
+      const costVal = document.getElementById('editCostPrice').value;
+      const sellingVal = document.getElementById('editSellingPrice').value;
+
       const updatedData = {
         status: document.getElementById('editStatus').value,
         customerName: document.getElementById('editCustomerName').value.trim(),
         phone: document.getElementById('editPhone').value.trim(),
         deviceName: document.getElementById('editDeviceName').value.trim(),
-        costPrice: Number(document.getElementById('editCostPrice').value),
-        sellingPrice: Number(document.getElementById('editSellingPrice').value),
+        costPrice: costVal !== "" ? parseFloat(costVal) : 0,
+        sellingPrice: sellingVal !== "" ? parseFloat(sellingVal) : 0,
         imei: document.getElementById('editImei').value.trim(),
         warrantyPeriod: Number(document.getElementById('editWarrantyPeriod').value),
         issueDescription: document.getElementById('editIssueDescription').value.trim(),
@@ -466,14 +470,17 @@
     async function createOrder(e) {
       e.preventDefault();
       const inImagesRaw = document.getElementById('inImages').value;
+      const costVal = document.getElementById('costPrice').value;
+      const sellingVal = document.getElementById('sellingPrice').value;
+
       const bodyData = {
         serviceType: document.getElementById('serviceType').value,
         receivedDate: document.getElementById('receivedDate').value,
         customerName: document.getElementById('customerName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         deviceName: document.getElementById('deviceName').value.trim(),
-        costPrice: Number(document.getElementById('costPrice').value),
-        sellingPrice: Number(document.getElementById('sellingPrice').value),
+        costPrice: costVal !== "" ? parseFloat(costVal) : 0,
+        sellingPrice: sellingVal !== "" ? parseFloat(sellingVal) : 0,
         imei: document.getElementById('imei').value.trim(),
         warrantyPeriod: Number(document.getElementById('warrantyPeriod').value),
         conditionNotes: document.getElementById('conditionNotes').value.trim(),
@@ -521,7 +528,6 @@
       document.getElementById('printModal').classList.add('hidden');
     }
 
-    // Xử lý đọc chuỗi ngày giờ chính xác không bị cộng đúp múi giờ
     function parseDateLocal(dStr) {
       if (!dStr) return new Date();
       if (typeof dStr === 'string' && dStr.includes('T')) {
