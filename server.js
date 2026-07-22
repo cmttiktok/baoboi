@@ -20,6 +20,11 @@ const OrderSchema = new mongoose.Schema({
   customerName: { type: String, required: true },
   phone: { type: String, required: true },
   deviceName: { type: String, required: true },
+  
+  // Bổ sung 2 trường giá cả & doanh thu
+  costPrice: { type: Number, default: 0 },
+  sellingPrice: { type: Number, default: 0 },
+  
   imei: String,
   issueDescription: String,
   conditionNotes: String,
@@ -81,11 +86,19 @@ app.get('/api/admin/orders', async (req, res) => {
 app.post('/api/admin/orders', async (req, res) => {
   try {
     const orderCode = `HD${Date.now().toString().slice(-6)}`;
+    
+    // Bóc tách và xử lý dữ liệu số
+    const costPrice = req.body.costPrice !== undefined && req.body.costPrice !== "" ? Number(req.body.costPrice) : 0;
+    const sellingPrice = req.body.sellingPrice !== undefined && req.body.sellingPrice !== "" ? Number(req.body.sellingPrice) : 0;
+
     const newOrder = new Order({
-      orderCode,
       ...req.body,
+      orderCode,
+      costPrice,
+      sellingPrice,
       receivedDate: req.body.receivedDate ? new Date(req.body.receivedDate) : new Date()
     });
+    
     await newOrder.save();
     res.json({ success: true, data: newOrder });
   } catch (err) {
@@ -96,9 +109,19 @@ app.post('/api/admin/orders', async (req, res) => {
 app.put('/api/admin/orders/:id', async (req, res) => {
   try {
     const updateData = { ...req.body };
+    
+    // Đảm bảo ép kiểu số khi cập nhật giá
+    if (updateData.costPrice !== undefined) {
+      updateData.costPrice = updateData.costPrice !== "" ? Number(updateData.costPrice) : 0;
+    }
+    if (updateData.sellingPrice !== undefined) {
+      updateData.sellingPrice = updateData.sellingPrice !== "" ? Number(updateData.sellingPrice) : 0;
+    }
+
     if (req.body.status === 'Đã hoàn tất' || req.body.status === 'Đã trả khách') {
       if (!updateData.completedDate) updateData.completedDate = new Date();
     }
+    
     const updated = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, data: updated });
   } catch (err) {
