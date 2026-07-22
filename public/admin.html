@@ -6,7 +6,6 @@
   <title>TIN HỌC BẢO BỐI - Quản Lý Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Cloudinary Upload Widget -->
   <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
   <style>
     body { -webkit-tap-highlight-color: transparent; }
@@ -29,6 +28,25 @@
   </div>
 
   <div class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- [NÂNG CẤP 3] Thống Kê Nhanh Tháng Hiện Tại -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 rounded-2xl shadow-sm space-y-2">
+      <div class="text-[11px] font-bold uppercase opacity-80">📊 Báo Cáo Thống Kê Tháng Này</div>
+      <div class="grid grid-cols-3 gap-2 text-center pt-1">
+        <div class="bg-white/10 p-2 rounded-xl">
+          <div class="text-[10px] opacity-80">Tổng Đơn</div>
+          <div id="statTotalOrders" class="text-base font-black">0</div>
+        </div>
+        <div class="bg-white/10 p-2 rounded-xl">
+          <div class="text-[10px] opacity-80">Doanh Thu</div>
+          <div id="statRevenue" class="text-xs font-black text-emerald-300">0đ</div>
+        </div>
+        <div class="bg-white/10 p-2 rounded-xl">
+          <div class="text-[10px] opacity-80">Lợi Nhuận</div>
+          <div id="statProfit" class="text-xs font-black text-amber-300">0đ</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Form Tạo Đơn Mới -->
     <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3">
@@ -76,6 +94,18 @@
         <div>
           <label class="font-semibold text-slate-600">Tên thiết bị / Gói camera *</label>
           <input type="text" id="deviceName" required placeholder="iPhone 13 / Gói 4 Cam Dahua" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl">
+        </div>
+
+        <!-- [NÂNG CẤP 4] Quản lý Chi phí & Linh kiện -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border">
+          <div>
+            <label class="font-semibold text-slate-600">Giá vốn linh kiện (đ)</label>
+            <input type="number" id="costPrice" placeholder="0" class="w-full mt-1 p-2 bg-white border rounded-lg">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">Giá báo khách (đ)</label>
+            <input type="number" id="sellingPrice" placeholder="0" class="w-full mt-1 p-2 bg-white border rounded-lg">
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2">
@@ -159,6 +189,18 @@
           <input type="text" id="editDeviceName" required class="w-full mt-1 p-2 bg-slate-50 border rounded-lg">
         </div>
 
+        <!-- [NÂNG CẤP 4] Sửa Chi Phí Chi Tiết -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded-lg border">
+          <div>
+            <label class="font-semibold text-slate-600">Giá Vốn (đ)</label>
+            <input type="number" id="editCostPrice" class="w-full mt-1 p-2 bg-white border rounded-lg">
+          </div>
+          <div>
+            <label class="font-semibold text-slate-600">Giá Khách (đ)</label>
+            <input type="number" id="editSellingPrice" class="w-full mt-1 p-2 bg-white border rounded-lg">
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="font-semibold text-slate-600">IMEI / Serial</label>
@@ -175,7 +217,6 @@
           <textarea id="editIssueDescription" rows="2" class="w-full mt-1 p-2 bg-slate-50 border rounded-lg"></textarea>
         </div>
 
-        <!-- Thêm/Sửa Ảnh Bằng Cloudinary -->
         <div>
           <label class="font-semibold text-slate-600 block mb-1">Hình ảnh thiết bị</label>
           <button type="button" onclick="openCloudinaryWidget('edit')" class="w-full bg-slate-700 text-white py-2 rounded-lg font-bold">
@@ -227,7 +268,7 @@
     let uploadedImageUrls = [];
     let editUploadedImageUrls = [];
 
-    // Tự động set thời gian hiện tại chính xác theo giờ Việt Nam (Local Timezone)
+    // Tự động set thời gian hiện tại chuẩn cho input datetime-local
     function setNowDateTime() {
       const now = new Date();
       const year = now.getFullYear();
@@ -241,11 +282,10 @@
     }
     setNowDateTime();
 
-    // Widget Cloudinary Tải Ảnh
     function openCloudinaryWidget(target = 'create') {
       cloudinary.openUploadWidget({
-        cloudName: 'uy1vtuzp', // Cloud Name của bạn
-        uploadPreset: 'baohanh', // Tên Unsigned Preset bạn tạo trên Cloudinary
+        cloudName: 'uy1vtuzp',
+        uploadPreset: 'baohanh',
         sources: ['local', 'camera'],
         multiple: true,
         maxFiles: 5
@@ -273,12 +313,14 @@
       `).join('');
     }
 
-    // Tải danh sách đơn hàng
     async function loadOrders() {
       const list = document.getElementById('orderList');
       try {
         const res = await fetch('/api/admin/orders');
         currentOrders = await res.json();
+
+        // Tính toán thống kê báo cáo (Nâng cấp 3)
+        calculateStats(currentOrders);
 
         if (!currentOrders.length) {
           list.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">Chưa có đơn nào</div>';
@@ -292,6 +334,7 @@
           if (o.status === 'Đã trả khách') statusBadgeClass = 'bg-slate-200 text-slate-700';
 
           const images = [...(o.inImages || []), ...(o.outImages || [])];
+          const profit = (o.sellingPrice || 0) - (o.costPrice || 0);
 
           return `
             <div class="border rounded-xl p-3 bg-white shadow-sm space-y-2.5 text-xs">
@@ -306,6 +349,15 @@
                 <div class="font-bold text-slate-800 text-sm">${o.deviceName}</div>
                 <div class="text-slate-600">Khách: <strong>${o.customerName}</strong> - ${o.phone}</div>
                 <div class="text-slate-500 text-[11px]">IMEI: ${o.imei || 'N/A'} | BH: ${o.warrantyPeriod || 0} Tháng</div>
+                
+                <!-- Bổ sung hiển thị Giá & Lợi Nhuận -->
+                ${(o.sellingPrice > 0) ? `
+                  <div class="bg-emerald-50 p-2 rounded-lg text-[11px] text-emerald-800 flex justify-between font-bold">
+                    <span>Giá: ${(o.sellingPrice).toLocaleString()}đ</span>
+                    <span>Lãi: ${(profit).toLocaleString()}đ</span>
+                  </div>
+                ` : ''}
+
                 ${o.issueDescription ? `<div class="bg-slate-50 p-2 rounded-lg text-[11px] text-slate-600 mt-1">Lỗi: ${o.issueDescription}</div>` : ''}
                 <div class="text-[10px] text-slate-400">Thời gian nhận: ${formatDateTime(o.receivedDate)}</div>
               </div>
@@ -336,7 +388,23 @@
       }
     }
 
-    // Mở Modal Chỉnh Sửa Thông Tin
+    // Tính toán Thống kê Báo cáo Doanh thu & Lợi nhuận
+    function calculateStats(orders) {
+      document.getElementById('statTotalOrders').innerText = orders.length;
+      let totalRevenue = 0;
+      let totalProfit = 0;
+
+      orders.forEach(o => {
+        const selling = Number(o.sellingPrice) || 0;
+        const cost = Number(o.costPrice) || 0;
+        totalRevenue += selling;
+        totalProfit += (selling - cost);
+      });
+
+      document.getElementById('statRevenue').innerText = totalRevenue.toLocaleString() + 'đ';
+      document.getElementById('statProfit').innerText = totalProfit.toLocaleString() + 'đ';
+    }
+
     function openEditModal(index) {
       const order = currentOrders[index];
       if (!order) return;
@@ -347,6 +415,8 @@
       document.getElementById('editCustomerName').value = order.customerName || '';
       document.getElementById('editPhone').value = order.phone || '';
       document.getElementById('editDeviceName').value = order.deviceName || '';
+      document.getElementById('editCostPrice').value = order.costPrice || 0;
+      document.getElementById('editSellingPrice').value = order.sellingPrice || 0;
       document.getElementById('editImei').value = order.imei || '';
       document.getElementById('editWarrantyPeriod').value = order.warrantyPeriod || 0;
       document.getElementById('editIssueDescription').value = order.issueDescription || '';
@@ -362,7 +432,6 @@
       document.getElementById('editModal').classList.add('hidden');
     }
 
-    // Lưu Cập Nhật Chỉnh Sửa
     async function saveEditOrder(e) {
       e.preventDefault();
       const id = document.getElementById('editOrderId').value;
@@ -373,6 +442,8 @@
         customerName: document.getElementById('editCustomerName').value.trim(),
         phone: document.getElementById('editPhone').value.trim(),
         deviceName: document.getElementById('editDeviceName').value.trim(),
+        costPrice: Number(document.getElementById('editCostPrice').value),
+        sellingPrice: Number(document.getElementById('editSellingPrice').value),
         imei: document.getElementById('editImei').value.trim(),
         warrantyPeriod: Number(document.getElementById('editWarrantyPeriod').value),
         issueDescription: document.getElementById('editIssueDescription').value.trim(),
@@ -386,15 +457,12 @@
       });
 
       if (res.ok) {
-        alert('✅ Cập nhật thông tin phiếu thành công!');
+        alert('✅ Cập nhật thành công!');
         closeEditModal();
         loadOrders();
-      } else {
-        alert('❌ Có lỗi xảy ra khi cập nhật!');
       }
     }
 
-    // Tạo đơn mới
     async function createOrder(e) {
       e.preventDefault();
       const inImagesRaw = document.getElementById('inImages').value;
@@ -404,6 +472,8 @@
         customerName: document.getElementById('customerName').value.trim(),
         phone: document.getElementById('phone').value.trim(),
         deviceName: document.getElementById('deviceName').value.trim(),
+        costPrice: Number(document.getElementById('costPrice').value),
+        sellingPrice: Number(document.getElementById('sellingPrice').value),
         imei: document.getElementById('imei').value.trim(),
         warrantyPeriod: Number(document.getElementById('warrantyPeriod').value),
         conditionNotes: document.getElementById('conditionNotes').value.trim(),
@@ -428,7 +498,6 @@
       }
     }
 
-    // Modal Tem In & QR Tra Cứu
     function openPrintModalByIndex(index) {
       const order = currentOrders[index];
       if (!order) return;
@@ -452,13 +521,28 @@
       document.getElementById('printModal').classList.add('hidden');
     }
 
-    // Hiển thị ngày giờ đầy đủ chuẩn múi giờ Việt Nam
-    function formatDateTime(d) {
-      if (!d) return 'N/A';
-      const date = new Date(d);
-      const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-      const dateStr = date.toLocaleDateString('vi-VN');
-      return `${timeStr} - ${dateStr}`;
+    // Xử lý đọc chuỗi ngày giờ chính xác không bị cộng đúp múi giờ
+    function parseDateLocal(dStr) {
+      if (!dStr) return new Date();
+      if (typeof dStr === 'string' && dStr.includes('T')) {
+        const parts = dStr.split('T');
+        const [y, m, d] = parts[0].split('-');
+        const [h, min, sec] = parts[1].split(':');
+        return new Date(y, m - 1, d, h || 0, min || 0, (sec || '0').slice(0, 2));
+      }
+      return new Date(dStr);
+    }
+
+    function formatDateTime(dStr) {
+      if (!dStr) return 'N/A';
+      const d = parseDateLocal(dStr);
+      const h = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      const sec = String(d.getSeconds()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${h}:${min}:${sec} - ${day}/${month}/${year}`;
     }
 
     async function checkHistory() {
